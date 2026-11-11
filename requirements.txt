@@ -1,20 +1,33 @@
-torch, 
-numpy 
-opencv-python
-gradio 
-tqdm,
-pydantic
-imagehash 
-scikit-image 
-pycolmap 
-hloc 
-lightglue
-kornia
-sam2
-open3d
-trimesh
-pymeshlab
-pyrender
-pandas
-matplotlib
-pytest 
+# FreeAI 3D Scanner — Core requirements (Giai đoạn 0-1)
+# Verified 2026-11-12: Ubuntu 26.04 / Python 3.14 / RTX 3050 Ti
+# Lưu ý: torch PHẢI == 2.10.0 — bản >=2.11 cần cuda-toolkit 13.x,
+#        xung đột với pycolmap-cuda12 (cần cuda-toolkit 12.x)
+
+# --- Deep Learning ---
+torch==2.10.0
+numpy>=2.0
+opencv-python>=5.0
+kornia>=0.9.0
+
+# --- 3D Reconstruction: COLMAP bindings bản CUDA (sparse + dense) ---
+pycolmap-cuda12==4.2.1
+
+# --- 3D Processing ---
+open3d>=0.20.0
+trimesh>=5.2.0
+pymeshlab>=2025.7
+pyrender>=0.1.45
+
+# --- Web UI ---
+gradio>=6.0
+pydantic>=2.14
+
+# --- Utilities ---
+tqdm>=4.67
+imagehash>=4.3
+scikit-image>=0.26
+pandas>=3.0
+matplotlib>=3.11
+
+# --- Testing ---
+pytest>=9.0

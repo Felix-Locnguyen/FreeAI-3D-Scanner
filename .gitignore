@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.venv_311/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Testing / tooling
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Dữ liệu thô — giữ cấu trúc thư mục, bỏ qua nội dung
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Trọng số mô hình (tải về / sinh ra, không commit)
+models/**/*.pth
+models/**/*.pt
+models/**/*.ckpt
+models/**/*.onnx
+models/**/*.safetensors
+models/**/*.pkl
+
+# Ảnh thô trong benchmarks (chỉ giữ metadata.md)
+benchmarks/**/*.jpg
+benchmarks/**/*.jpeg
+benchmarks/**/*.png
+benchmarks/**/*.webp
+benchmarks/**/*.mp4
+benchmarks/**/*.mov
+
+# Kết quả tái tạo & log
+*.ply
+*.log
+*.db
+*.sqlite3
+
+# COLMAP workspace
+sparse/
+dense/
+
+# Blender
+*.blend1
+
+# Jupyter
+.ipynb_checkpoints/
