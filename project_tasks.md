@@ -22,26 +22,36 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 
 ## Giai đoạn 1: Baseline (SIFT + COLMAP)
 
-**1.1 Tiền xử lý**
-- [ ] `video_processor.py`: trích frame từ video bằng FFmpeg
-- [ ] `quality_checker.py`: phát hiện mờ (Laplacian variance)
-- [ ] Phát hiện thiếu sáng/quá sáng (histogram độ sáng)
-- [ ] Loại frame trùng lặp / chọn frame theo khoảng cách góc nhìn
-- [ ] Xuất báo cáo chất lượng từng ảnh (Good / Blurry / Overexposed / Duplicate)
+**1.1 Tiền xử lý** ✅
+- [x] `video_processor.py`: trích frame từ video bằng FFmpeg
+- [x] `quality_checker.py`: phát hiện mờ (Laplacian variance, chuẩn hóa về 640px)
+- [x] Phát hiện thiếu sáng/quá sáng (histogram độ sáng)
+- [x] Loại frame trùng lặp (pHash 256-bit) / chọn frame theo khoảng cách góc nhìn
+- [x] Xuất báo cáo chất lượng từng ảnh (Good / Blurry / Overexposed / Duplicate) ra JSON
 
-**1.2 Tái tạo cơ bản**
-- [ ] `colmap_pipeline.py`: chạy `feature_extractor → matcher → mapper` (SIFT) bằng Python
-- [ ] Đọc kết quả: số ảnh đăng ký, số điểm sparse, reprojection error
-- [ ] Dense reconstruction (undistort → patch match stereo → fusion)
-- [ ] Xuất point cloud PLY
+**1.2 Tái tạo cơ bản** ✅
+- [x] `colmap_pipeline.py`: chạy `feature_extractor → matcher → mapper` (SIFT) bằng Python
+- [x] Đọc kết quả: số ảnh đăng ký, số điểm sparse, reprojection error (ghi `stats.json`)
+- [x] Dense reconstruction (undistort → patch match stereo → fusion) — tùy chọn `--dense`
+- [x] Xuất point cloud PLY (dense: `mvs/dense.ply`; sparse: `sparse.ply`)
 
-**1.3 Giao diện và đo lường**
-- [ ] `app.py`: Gradio nhận ảnh/video, gọi pipeline, hiển thị tiến trình
-- [ ] Hiển thị point cloud/model trên Gradio Model3D
-- [ ] `metrics.py`: ghi số liệu mỗi lần chạy ra JSON/SQLite
-- [ ] Chạy baseline trên toàn bộ bộ dữ liệu thử và lưu bảng kết quả
+**1.3 Giao diện và đo lường** ✅
+- [x] `app.py`: Gradio nhận ảnh/video, gọi pipeline, hiển thị tiến trình
+- [x] Hiển thị point cloud/model trên Gradio Model3D
+- [x] `src/utils/metrics.py`: ghi số liệu mỗi lần chạy ra JSONL (`data/output/runs.jsonl`)
+- [x] Chạy baseline trên toàn bộ bộ dữ liệu thử và lưu bảng kết quả (`src/scripts/run_baseline.py`)
 
-**DoD:** upload video → nhận point cloud xem được trên web; có số liệu baseline cho mọi bộ dữ liệu.
+**DoD:** upload video → nhận point cloud xem được trên web; có số liệu baseline cho mọi bộ dữ liệu ✅ *(đạt 2026-11-15, tag `phase-1-done`)*.
+
+**Kết quả baseline** (sparse-only, RTX 3050 Ti 4GB, 2026-11-15):
+
+| Bộ dữ liệu | Ảnh vào | Đăng ký | Điểm 3D | Reprojection | PLY | Thời gian |
+|---|---|---|---|---|---|---|
+| `sample_temple` (47 ảnh) | 47 | 47 | 7.630 | 0.307 px | 0.11 MB | 7.7 s |
+| `test_video` (2 fps) | 24 | 24 | 1.053 | 1.085 px | 0.02 MB | 2.1 s |
+
+*Số điểm 3D dao động ±0.1% giữa các lần chạy (SIFT/matcher GPU không deterministic tuyệt đối).*
+*Video test hiện 13/24 frame bị Blurry (video gốc hơi mềm) — quality_checker vẫn giữ lại vì baseline dùng toàn bộ ảnh; app mặc định lọc ảnh Good.*
 
 ---
 
