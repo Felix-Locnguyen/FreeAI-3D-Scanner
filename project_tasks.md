@@ -12,10 +12,11 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 - [x] Kiểm tra GPU: `nvidia-smi`, PyTorch nhận CUDA, ghi lại VRAM (RTX 3050 Ti 4GB — xem `docs/environment.md`)
 - [x] Cài FFmpeg (8.0.1 — đã có sẵn trên máy)
 - [x] Cài COLMAP bản có CUDA (`pycolmap-cuda12`), chạy thử trên bộ ảnh mẫu — PASS end-to-end, 47/47 ảnh, exit code 0 (`src/scripts/smoke_colmap.py`)
-- [ ] Quay/chụp bộ dữ liệu thử: vật thể nhiều texture, ít texture, bóng, trong suốt, hình dạng phức tạp *(user tự làm — xem `benchmarks/README.md`)*
-- [ ] Ghi nhãn mô tả từng bộ dữ liệu (điều kiện sáng, số ảnh, thiết bị) vào `benchmarks/` *(template sẵn trong `benchmarks/README.md`)*
+- [ ] Quay/chụp bộ dữ liệu thử: vật thể nhiều texture, ít texture, bóng, trong suốt, hình dạng phức tạp *(demo — **không chặn G0**, làm khi nào cần demo; hướng dẫn trong `benchmarks/README.md`)*
+- [ ] Ghi nhãn mô tả từng bộ dữ liệu (điều kiện sáng, số ảnh, thiết bị) vào `benchmarks/` *(demo — template sẵn trong `benchmarks/README.md`)*
 
-**DoD:** COLMAP chạy tay thành công trên bộ ảnh mẫu; có ít nhất 3 bộ dữ liệu thử.
+**DoD:** COLMAP chạy tay thành công trên bộ ảnh mẫu ✅ *(đạt 2026-11-12: 47/47 ảnh, PASS, exit 0)*.
+*Điều chỉnh 2026-11-14: 3 bộ dữ liệu thử chuyển thành hạng mục demo, **không chặn G0** (quyết định của chủ dự án).*
 
 ---
 
