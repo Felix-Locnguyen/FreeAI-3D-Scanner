@@ -57,10 +57,18 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 
 ## Giai đoạn 2: Tích hợp Deep Learning
 
-**2.1 Feature matching**
-- [ ] Tích hợp ALIKED (hoặc SuperPoint) + LightGlue vào pipeline (COLMAP có hỗ trợ hoặc dùng hloc rồi import)
-- [ ] Cho phép chọn matcher trong UI: SIFT / ALIKED+LightGlue
-- [ ] Ghi lại inlier ratio, số ảnh đăng ký, thời gian
+**2.1 Feature matching** ✅ *(đạt 2026-11-16)*
+- [x] Tích hợp SuperPoint/ALIKED + LightGlue vào pipeline — **không dùng hloc**: tự trích điểm bằng PyTorch rồi ghi keypoints + matches thẳng vào database COLMAP (`src/ai/feature_matching/matching_model.py`), COLMAP chạy RANSAC + tái tạo như bình thường
+- [x] Cho phép chọn matcher trong UI: `gr.Dropdown` SIFT / SuperPoint / ALIKED (`app.py`) và `--matcher` trên dòng lệnh
+- [x] Ghi lại inlier ratio, số ảnh đăng ký, thời gian (`stats.json` + `runs.jsonl`, cột `matcher` và `inlier_ratio`)
+
+*Kết quả thử (`sample_temple`, 47 ảnh, RTX 3050 Ti):*
+
+| Matcher | Đăng ký | Điểm 3D | Reprojection | Inlier ratio | Thời gian |
+|---|---|---|---|---|---|
+| SIFT | 47/47 | 7.628 | 0.307 px | 0.964 | 7.4 s |
+| SuperPoint+LightGlue | 45/47 | 4.350 | 1.095 px | 0.904 | 57.9 s |
+| ALIKED+LightGlue | — (thử 8 ảnh) | — | — | 0.972 | — |
 
 **2.2 Segmentation**
 - [ ] Tích hợp SAM 2 (`sam2_model.py`): tạo mask vật thể trên ảnh

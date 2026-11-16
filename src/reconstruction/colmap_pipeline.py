@@ -21,6 +21,9 @@ import time
 from pathlib import Path
 
 import pycolmap #Thư viện tính toán tái tạo cấu trúc 3D (SfM) và xác định vị trí camera từ ảnh chụp 2D.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from src.ai.feature_matching.matching_model import db_match_stats, run_deep_matching
+
 
 # các loại đuôi ảnh chấp nhận 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
@@ -30,9 +33,10 @@ def count_images(image_dir):
     return sorted(pic.name for pic in Path(image_dir).iterdir() if pic.suffix.lower() in IMAGE_EXTS)
 
 
-def run_colmap(image_dir, work_dir, dense=False, log=print):
+def run_colmap(image_dir, work_dir, dense=False, matcher="sift", log=print):
     """Chạy COLMAP end-to-end, trả về dict số liệu.
 
+    matcher: "sift" (COLMAP tự làm) | "superpoint" | "aliked" (mạng nơ-ron, xem matching_model.py)
     log: hàm nhận 1 chuỗi (mặc định print; truyền hàm khác để đẩy lên Gradio).
     """
     image_dir = Path(image_dir)
@@ -62,20 +66,27 @@ def run_colmap(image_dir, work_dir, dense=False, log=print):
     stats = {
         "image_dir": str(image_dir),
         "images_input": len(images),
+        "matcher": matcher,
         "timings": {},
     }
 
-    # 1 Trích xuất đặc trưng SIFT 
-    t = time.time()
-    log("[1/3] Trich xuat dac trung SIFT...")
-    pycolmap.extract_features(database_path, image_dir)
-    stats["timings"]["extract"] = round(time.time() - t, 1)
+    # 1 + 2: Trích điểm đặc trưng và ghép cặp ảnh
+    if matcher == "sift":
+        # --- SIFT: để COLMAP tự làm (đường cũ, giữ nguyên) ---
+        t = time.time()
+        log("[1/3] Trich xuat dac trung SIFT...")
+        pycolmap.extract_features(database_path, image_dir)
+        stats["timings"]["extract"] = round(time.time() - t, 1)
 
-    # --- 2. Ghép cặp ảnh (exhaustive: mọi cặp, chậm nhưng chắc) ---
-    t = time.time()
-    log("[2/3] Ghep cap anh (exhaustive matching)...")
-    pycolmap.match_exhaustive(database_path)
-    stats["timings"]["match"] = round(time.time() - t, 1)
+        t = time.time()
+        log("[2/3] Ghep cap anh (exhaustive matching)...")
+        pycolmap.match_exhaustive(database_path)
+        stats["timings"]["match"] = round(time.time() - t, 1)
+        stats.update(db_match_stats(database_path))
+    else:
+        # --- Matcher học sâu: SuperPoint/ALIKED + LightGlue (matching_model.py) ---
+        stats.update(run_deep_matching(image_dir, database_path,
+                                       extractor=matcher, log=log))
 
     # --- 3. Sparse reconstruction (SfM) ---
     t = time.time()
@@ -129,10 +140,18 @@ def run_colmap(image_dir, work_dir, dense=False, log=print):
 
 
 def main():
+    # --matcher superpoint: lấy giá trị rồi loại khỏi argv để không bị coi là đường dẫn ảnh
+    matcher = "sift"
+    if "--matcher" in sys.argv:
+        i = sys.argv.index("--matcher")
+        matcher = sys.argv[i + 1]
+        del sys.argv[i:i + 2]
+
     # Lấy tham số không bắt đầu bằng "-" làm đường dẫn (cho phép gõ --dense ở bất kỳ đâu)
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     if not args:
-        print("Cach dung: python src/reconstruction/colmap_pipeline.py <thu_muc_anh> [--dense]")
+        print("Cach dung: python src/reconstruction/colmap_pipeline.py <thu_muc_anh> "
+              "[--dense] [--matcher superpoint|aliked]")
         return 2
 
     image_dir = Path(args[0])
@@ -141,7 +160,8 @@ def main():
 
     try:
         # flush=True: COLMAP ghi log ra stderr nên nếu không flush, log của ta sẽ bị đẩy xuống cuối
-        stats = run_colmap(image_dir, work_dir, dense=dense, log=lambda m: print(m, flush=True))
+        stats = run_colmap(image_dir, work_dir, dense=dense, matcher=matcher,
+                           log=lambda m: print(m, flush=True))
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         print(f"LOI: {exc}")
         return 1

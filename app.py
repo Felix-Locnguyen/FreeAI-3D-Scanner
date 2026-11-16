@@ -78,9 +78,11 @@ def export_sparse_ply(sparse_dir, out_ply):
 
 # HÀM ĐIỀU PHỐI CHÍNH (PIPELINE CALLBACK)
 
-def run_pipeline(video, images, fps, dense, good_only, progress=gr.Progress()):
+def run_pipeline(video, images, fps, dense, good_only, matcher, progress=gr.Progress()):
     """Callback chính của ứng dụng: 
     Video/Ảnh đầu vào -> Kiểm tra chất lượng -> Chạy COLMAP SfM -> Xuất file PLY + Lưu số liệu.
+
+    matcher: "sift" | "superpoint" | "aliked" — cách ghép cặp ảnh.
     """
     logs = []
 
@@ -125,10 +127,13 @@ def run_pipeline(video, images, fps, dense, good_only, progress=gr.Progress()):
 
         
         
-        # Bước 3: Thực thi thuật toán COLMAP (Trích xuất SIFT -> Khớp cặp -> Tái tạo Sparse/Dense)
-        
-        progress(0.2, desc="COLMAP: SIFT -> matching -> sparse")
-        stats = run_colmap(colmap_input, work_dir, dense=dense, log=log)
+        # Bước 3: Thực thi thuật toán COLMAP (Trích điểm -> Khớp cặp -> Tái tạo Sparse/Dense)
+
+        progress(0.2, desc=f"COLMAP: {matcher} -> matching -> sparse")
+        stats = run_colmap(colmap_input, work_dir, dense=dense, matcher=matcher, log=log)
+        if stats.get("inlier_ratio") is not None:
+            log(f"[matcher] {stats['matcher']}: inlier {stats['inlier_ratio']:.1%} "
+                f"({stats['inlier_matches']}/{stats['raw_matches']})")
 
         # Cảnh báo sớm khi quá nửa số ảnh không đăng ký được (thiếu overlap / ít texture)
         rate = stats["images_registered"] / max(stats["images_input"], 1)
@@ -177,6 +182,13 @@ with gr.Blocks(title="FreeAI 3D Scanner") as demo:
                 fps_in = gr.Slider(0.5, 5.0, value=2.0, step=0.5, label="FPS trích frame")
                 dense_in = gr.Checkbox(value=False, label="Dense (~10 phút)")
             good_in = gr.Checkbox(value=True, label="Chỉ dùng ảnh Good")
+            # Matcher ghép cặp: SIFT (mặc định, nhanh) hoặc mạng nơ-ron (chậm hơn nhưng bền hơn)
+            matcher_in = gr.Dropdown(
+                choices=["sift", "superpoint", "aliked"],
+                value="sift",
+                label="Matcher",
+                info="SIFT: nhanh | SuperPoint/ALIKED + LightGlue: mạng nơ-ron (2.1)",
+            )
             btn = gr.Button("Tạo point cloud", variant="primary")
 
         # Cột bên phải: Hiển thị kết quả trực quan (Mô hình 3D, Bảng số liệu, Log hệ thống)
@@ -192,7 +204,7 @@ with gr.Blocks(title="FreeAI 3D Scanner") as demo:
     # Đăng ký sự kiện (Event Listener): Khi bấm nút, gọi hàm run_pipeline và truyền nhận dữ liệu giữa UI
     btn.click(
         fn=run_pipeline,
-        inputs=[video_in, images_in, fps_in, dense_in, good_in],
+        inputs=[video_in, images_in, fps_in, dense_in, good_in, matcher_in],
         outputs=[model_out, stats_out, quality_out, log_out, file_out],
     )
 

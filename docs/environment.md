@@ -16,7 +16,13 @@ Ghi ngày: 2026-11-12
 - FFmpeg: 8.0.1 (đã cài sẵn)
 - CUDA toolkit hệ thống: không cài (dùng CUDA runtime kèm wheel)
 - COLMAP: pycolmap-cuda12 4.2.1 (CUDA 12, has_cuda=True)
-- torch: 2.10.0 (CUDA 12.8)
+- torch: 2.10.0 (CUDA 12.8) — **pin chặt**, pycolmap-cuda12 cần CUDA 12
+- torchvision: 0.25.0 — **phải khớp torch 2.10** (bản mới hơn đòi torch>=2.14)
+- lightglue: `git+https://github.com/cvg/LightGlue.git` (SuperPoint/ALIKED + LightGlue, Giai đoạn 2.1)
+
+> ⚠️ `pycolmap-cuda12` **không build kèm ONNX** → không gọi được các loại
+> `FeatureExtractorType.ALIKED_*`/LightGlue native của pycolmap (process bị SIGABRT).
+> Matcher học sâu được cài đặt riêng bằng PyTorch — xem `OPENCODE.md` mục 5.4.
 
 ## Kết quả kiểm tra
 

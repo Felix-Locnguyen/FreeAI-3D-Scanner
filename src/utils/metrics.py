@@ -25,8 +25,10 @@ COLUMNS = [
     "timestamp",
     "source",
     "images_input",
+    "matcher",
     "images_registered",
     "points3d",
+    "inlier_ratio",
     "mean_reprojection_error_px",
     "q_good",
     "q_blurry",
@@ -69,8 +71,12 @@ def make_record(stats, quality=None, source="images", run_id=None, ply=None):
         
         # Thống kê số lượng ảnh và điểm 3D từ SfM
         "images_input": stats.get("images_input"),
+        # Matcher dùng để ghép cặp: "sift" (mặc định) hoặc "superpoint"/"aliked"
+        "matcher": stats.get("matcher", "sift"),
         "images_registered": stats.get("images_registered"),
         "points3d": stats.get("points3d"),
+        # Tỷ lệ match còn lại sau RANSAC (cao = match chất lượng tốt)
+        "inlier_ratio": stats.get("inlier_ratio"),
         "mean_reprojection_error_px": stats.get("mean_reprojection_error_px"),
         
         # Thống kê phân loại chất lượng ảnh đầu vào
