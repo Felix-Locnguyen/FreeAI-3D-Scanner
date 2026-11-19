@@ -59,7 +59,7 @@ def main(video_path, out_dir=None, fps=DEFAULT_FPS):
 
     # In thông tin tổng kết
     print("----------------------------------------")
-    print(f"Trích xuất thành công!")
+    print("Trích xuất thành công!")
     print(f"Tổng số frame : {len(frames)}")
     if frames:
         print(f"Frame đầu tiên: {frames[0].name}")

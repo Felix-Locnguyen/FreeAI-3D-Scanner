@@ -92,11 +92,13 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 ***`sample_temple` không dùng được để test mask** — ảnh Middlebury vốn đã có nền đen, mask chỉ cắt mất phần đền → vài ảnh chỉ còn 3–6 điểm SIFT.*
 
 **2.3 So sánh thực nghiệm**
-- [ ] Chạy 4 cấu hình: SIFT, SIFT + mask, LightGlue, LightGlue + mask
-- [ ] Điền bảng so sánh trên toàn bộ bộ dữ liệu
-- [ ] Viết phân tích ngắn: cấu hình nào tốt hơn, ở loại vật thể nào, vì sao
+- [x] Chạy 4 cấu hình: SIFT, SIFT + mask, LightGlue, LightGlue + mask
+- [x] Điền bảng so sánh trên toàn bộ bộ dữ liệu
+- [x] Viết phân tích ngắn: cấu hình nào tốt hơn, ở loại vật thể nào, vì sao
 
-**DoD:** bảng so sánh 4 cấu hình có số liệu thật; UI chọn được matcher và mask.
+**DoD:** bảng so sánh 4 cấu hình có số liệu thật; UI chọn được matcher và mask. ✅
+
+> Bảng + phân tích đầy đủ trong `benchmarks/README.md`. Số liệu chính: **SIFT thắng về đăng ký (47/47, 24/24) và tốc độ (~8× nhanh LightGlue)**; **LightGlue thắng về số điểm (5×)**; **mask chỉ có ích với vật thể tách được khỏi nền** — trên `sample_temple` nó phá (47/47 → 6/47), trên `test_video` cắt 54% điểm nền nhưng mất 3–4/24 ảnh.
 
 ---
 
