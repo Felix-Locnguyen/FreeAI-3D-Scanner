@@ -104,10 +104,15 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 
 ## Giai đoạn 3: Mesh, Texture và Xuất file
 
-**3.1 Xử lý point cloud**
-- [ ] `pointcloud_processor.py`: lọc nhiễu (statistical outlier), downsample
-- [ ] Ước lượng normal
-- [ ] Cắt vùng vật thể (dùng mask hoặc bounding box)
+**3.1 Xử lý point cloud** ✅ *(đạt 2026-11-19)*
+- [x] `pointcloud_processor.py`: lọc nhiễu (statistical outlier), downsample
+- [x] Ước lượng normal
+- [x] Cắt vùng vật thể (dùng mask hoặc bounding box)
+
+*Module `src/pointcloud/pointcloud_processor.py` (~250 dòng, 6 hàm nhỏ): `load_ply`/`save_ply`, `remove_outliers()` (SOR), `downsample()` (voxel), `estimate_normals()`, `crop_bbox()`, `crop_by_mask()` (chiếu điểm 3D vào từng ảnh đã biết pose rồi so độ sáng với `images_masked/` của SAM 2).*
+*Thứ tự xử lý: **cắt → lọc nhiễu → giảm điểm → normal** (cắt trước để điểm nền không làm sai phép đo nhiễu; normal sau cùng vì `radius` phụ thuộc độ thưa).*
+*Test PASS trên `test_video` sparse 1.049 điểm: SOR bỏ 18 điểm lơ lửng · mask bỏ 93 điểm nền (0,8 s/24 ảnh) · voxel 0,05 → 730 điểm · normal OK · các nhánh lỗi (bbox sai số, cloud rỗng) báo thông báo tiếng Việt rõ ràng.*
+*Test PASS trên `sample_temple` **dense** 155.477 điểm: mask → 145.725 (bỏ 9.752 điểm nền, 17 s/47 ảnh) · SOR → 141.433 · voxel 0,01 → 37.942 · normal OK. **Dense = 20,4× sparse** (7.630 → 155.477) — đây là câu trả lời cho thắc mắc "điểm quá thưa": điểm thưa là do thiếu bước MVS, không phải do SIFT.*
 
 **3.2 Mesh**
 - [ ] `mesh_processor.py`: Poisson surface reconstruction (Open3D)
