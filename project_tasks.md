@@ -114,10 +114,16 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 *Test PASS trên `test_video` sparse 1.049 điểm: SOR bỏ 18 điểm lơ lửng · mask bỏ 93 điểm nền (0,8 s/24 ảnh) · voxel 0,05 → 730 điểm · normal OK · các nhánh lỗi (bbox sai số, cloud rỗng) báo thông báo tiếng Việt rõ ràng.*
 *Test PASS trên `sample_temple` **dense** 155.477 điểm: mask → 145.725 (bỏ 9.752 điểm nền, 17 s/47 ảnh) · SOR → 141.433 · voxel 0,01 → 37.942 · normal OK. **Dense = 20,4× sparse** (7.630 → 155.477) — đây là câu trả lời cho thắc mắc "điểm quá thưa": điểm thưa là do thiếu bước MVS, không phải do SIFT.*
 
-**3.2 Mesh**
-- [ ] `mesh_processor.py`: Poisson surface reconstruction (Open3D)
-- [ ] Loại vùng mật độ thấp, decimate, làm mượt
-- [ ] Kiểm tra mesh: số lỗ hổng, thành phần rời, watertight
+**3.2 Mesh** ✅ *(đạt 2026-11-20)*
+- [x] `mesh_processor.py`: Poisson surface reconstruction (Open3D)
+- [x] Loại vùng mật độ thấp, decimate, làm mượt
+- [x] Kiểm tra mesh: số lỗ hổng, thành phần rời, watertight
+
+*Module `src/mesh/mesh_processor.py` (~275 dòng, 9 hàm nhỏ): `load_pcd()` / `save_mesh()`, `poisson_reconstruct()`, `trim_density()`, `keep_largest_component()`, `decimate()`, `smooth()`, `count_open_edges()`, `check_mesh()`.*
+*Thứ tự xử lý: **Poisson → bỏ mật độ thấp → giữ cụm lớn nhất → decimate → mượt Taubin → kiểm tra** (trim trước khi tách cụm vì điểm rìa density thấp hay nằm ở cụm con; mượt sau decimate vì QEM để lại mặt thô).*
+*Đầu vào **bắt buộc có normal** (thiếu thì báo đúng lệnh `pointcloud_processor --normals`); đầu ra chỉ nhận `.ply`/`.obj`/`.glb` — `.stl` bị từ chối vì Open3D 0.20 ghi `.stl` thất bại (trả `False`, file 0 byte).*
+*Chất lượng trên `sample_temple` dense: watertight = **không** (bình thường với ảnh chụp một phía), edge manifold = có, không tự giao, 1 cụm, Euler = −77.*
+*⚠️ **Chưa chạy CLI end-to-end** — chỉ qua pyflakes + `--help` + đọc tham số mặc định (cố ý không chạy Poisson để tránh lag máy). Số liệu ở mục 9.3 `OPENCODE.md` lấy từ thí nghiệm read-only trước đó, cần chạy lại để đối chiếu.*
 
 **3.3 Texture**
 - [ ] `texture_processor.py`: texture mapping bằng OpenMVS (TextureMesh) hoặc phương án tương đương
