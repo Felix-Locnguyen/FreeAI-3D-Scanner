@@ -26,6 +26,7 @@ COLUMNS = [
     "source",
     "images_input",
     "matcher",
+    "mask",
     "images_registered",
     "points3d",
     "inlier_ratio",
@@ -73,6 +74,8 @@ def make_record(stats, quality=None, source="images", run_id=None, ply=None):
         "images_input": stats.get("images_input"),
         # Matcher dùng để ghép cặp: "sift" (mặc định) hoặc "superpoint"/"aliked"
         "matcher": stats.get("matcher", "sift"),
+        # Có tô nền đen bằng SAM 2 trước khi trích đặc trưng không (Giai đoạn 2.2)
+        "mask": bool(stats.get("mask")),
         "images_registered": stats.get("images_registered"),
         "points3d": stats.get("points3d"),
         # Tỷ lệ match còn lại sau RANSAC (cao = match chất lượng tốt)

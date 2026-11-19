@@ -19,10 +19,17 @@ Ghi ngày: 2026-11-12
 - torch: 2.10.0 (CUDA 12.8) — **pin chặt**, pycolmap-cuda12 cần CUDA 12
 - torchvision: 0.25.0 — **phải khớp torch 2.10** (bản mới hơn đòi torch>=2.14)
 - lightglue: `git+https://github.com/cvg/LightGlue.git` (SuperPoint/ALIKED + LightGlue, Giai đoạn 2.1)
+- SAM-2 1.0 (hydra-core 1.3.8, omegaconf 2.3.1, iopath 0.1.10) — Giai đoạn 2.2
+  - Trọng số: `models/segmentation/sam2.1_hiera_tiny.pt` (149 MB, gitignore)
+  - Cài đặt chi tiết + 2 lỗi hay gặp: `requirements-ml.txt`
 
 > ⚠️ `pycolmap-cuda12` **không build kèm ONNX** → không gọi được các loại
 > `FeatureExtractorType.ALIKED_*`/LightGlue native của pycolmap (process bị SIGABRT).
 > Matcher học sâu được cài đặt riêng bằng PyTorch — xem `OPENCODE.md` mục 5.4.
+
+> ⚠️ **torch giữ VRAM sau khi chạy SAM 2** → nếu không `torch.cuda.empty_cache()`
+> trước khi chạy COLMAP, SIFT GPU báo `illegal memory access` và cho **0 điểm**.
+> `apply_mask()` đã tự động gọi ở cuối — xem `OPENCODE.md` mục 6.4.
 
 ## Kết quả kiểm tra
 

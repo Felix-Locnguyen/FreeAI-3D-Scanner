@@ -1,6 +1,29 @@
-# Deep Learning extras (Giai đoạn 2) — CHƯA cài bây giờ.
-# Khi sang Giai đoạn 2 chạy: pip install -r requirements-ml.txt
+# Deep Learning extras (Giai đoạn 2)
+#
+# ⚠️ KHÔNG cài file này bằng `pip install -r requirements-ml.txt` — xem lý do từng dòng bên dưới.
 
-hloc @ git+https://github.com/cvg/Hierarchical-Localization.git
-lightglue @ git+https://github.com/cvg/lightglue.git
-sam2 @ git+https://github.com/facebookresearch/sam2.git
+# --- ĐÃ cài rồi, nằm trong requirements.txt (Giai đoạn 2.1) ---
+# lightglue @ git+https://github.com/cvg/LightGlue.git
+
+# --- SAM 2 (Giai đoạn 2.2): PHẢI cài bằng tay ---
+#     git clone --depth 1 https://github.com/facebookresearch/sam2.git /tmp/sam2
+#     cd /tmp/sam2
+#     SAM2_BUILD_CUDA=0 pip install --no-build-isolation .
+#
+#     * SAM2_BUILD_CUDA=0        máy không có nvcc. Extension CUDA chỉ dùng để
+#                                làm sạch mask (lỗ nhỏ), không ảnh hưởng kết quả.
+#     * --no-build-isolation     BẮT BUỘC. pyproject.toml của sam2 đòi "torch"
+#                                trong môi trường build cách ly -> pip tải torch
+#                                bản CUDA 13 (~4 GB) vào /tmp (tmpfs chỉ 11,3 GB)
+#                                -> lỗi "Disk quota exceeded".
+#     * KHÔNG dùng "sam2 @ git+https://github.com/facebookresearch/sam2.git":
+#       pip 26 báo "inconsistent name" (package name là sam-2) -> cài thất bại.
+#
+#     Rồi tải trọng số (149 MB) vào models/segmentation/ (thư mục này đã gitignore):
+#       curl -L -o models/segmentation/sam2.1_hiera_tiny.pt \
+#         https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_tiny.pt
+
+# --- hloc: KHÔNG dùng nữa ---
+#     Giai đoạn 2.1 tự trích điểm bằng PyTorch rồi ghi thẳng vào database COLMAP
+#     (src/ai/feature_matching/matching_model.py) -> không cần hloc.
+# hloc @ git+https://github.com/cvg/Hierarchical-Localization.git

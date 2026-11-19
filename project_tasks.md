@@ -70,12 +70,26 @@ Quy ước: mỗi giai đoạn chỉ bắt đầu khi giai đoạn trước đ�
 | SuperPoint+LightGlue | 45/47 | 4.350 | 1.095 px | 0.904 | 57.9 s |
 | ALIKED+LightGlue | — (thử 8 ảnh) | — | — | 0.972 | — |
 
-**2.2 Segmentation**
-- [ ] Tích hợp SAM 2 (`sam2_model.py`): tạo mask vật thể trên ảnh
-- [ ] Hỗ trợ video: theo dõi vật thể qua các frame
-- [ ] Cách chọn vật thể trong UI (click điểm hoặc box)
-- [ ] Áp mask khi trích đặc trưng để loại nền
-- [ ] Công tắc bật/tắt mask trong UI
+**2.2 Segmentation** ✅ *(đạt 2026-11-17)*
+- [x] Tích hợp SAM 2 (`sam2_model.py`): tạo mask vật thể trên ảnh — `load_model()`, `biggest_mask()` (tự động), `point_mask()` (click), `apply_mask()` (tô nền đen → `work_dir/images_masked/`)
+- [x] Hỗ trợ video: **1 điểm click (tỷ lệ u,v) áp cho mọi frame** — thay cho "theo dõi vật thể" (phương án 1 đã chọn: đơn giản, không cần tracker)
+- [x] Cách chọn vật thể trong UI: click điểm trên ảnh xem trước `gr.Image` (box chưa làm)
+- [x] Áp mask khi trích đặc trưng để loại nền — thêm nhánh `if mask:` để đổi `image_dir`, **không sửa** SIFT/LightGlue
+- [x] Công tắc bật/tắt mask trong UI: `gr.Checkbox` "Loại nền bằng SAM 2"
+
+*Kết quả (`test_video`, 24 frame 1920×1080, RTX 3050 Ti, 2026-11-17):*
+
+| Cấu hình | Đăng ký | Điểm 3D | Reprojection | Inlier | Thời gian mask | Tổng |
+|---|---|---|---|---|---|---|
+| SIFT (baseline) | 24/24 | 1.053 | 1,085 px | — | — | 2,1 s |
+| SIFT + mask tự động | 20/24 | 873 | 1,030 px | 0,814 | 111,7 s | 113,9 s |
+| SIFT + mask click | 24/24 | 901 | 1,042 px | 0,604 | 4,5 s | 7,5 s |
+| SuperPoint (baseline) | 24/24 | 5.200 | 1,380 px | 0,768 | — | 16,3 s |
+| SuperPoint + mask tự động | 21/24 | 2.343 | 1,452 px | 0,823 | 111,4 s | 120,2 s |
+| SuperPoint + mask click | 24/24 | 2.509 | 1,430 px | 0,794 | 4,5 s | 14,5 s |
+
+*Đọc bảng: mask **cắt bớt điểm nền** (SuperPoint 5.200 → 2.509 điểm) nhưng giữ được 24/24 ảnh đăng ký; **click nhanh gấp ~25×** so với tự động (4,5 s vs 111,7 s).*
+***`sample_temple` không dùng được để test mask** — ảnh Middlebury vốn đã có nền đen, mask chỉ cắt mất phần đền → vài ảnh chỉ còn 3–6 điểm SIFT.*
 
 **2.3 So sánh thực nghiệm**
 - [ ] Chạy 4 cấu hình: SIFT, SIFT + mask, LightGlue, LightGlue + mask

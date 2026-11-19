@@ -33,10 +33,13 @@ def count_images(image_dir):
     return sorted(pic.name for pic in Path(image_dir).iterdir() if pic.suffix.lower() in IMAGE_EXTS)
 
 
-def run_colmap(image_dir, work_dir, dense=False, matcher="sift", log=print):
+def run_colmap(image_dir, work_dir, dense=False, matcher="sift", mask=False,
+               mask_point=None, log=print):
     """Chạy COLMAP end-to-end, trả về dict số liệu.
 
     matcher: "sift" (COLMAP tự làm) | "superpoint" | "aliked" (mạng nơ-ron, xem matching_model.py)
+    mask: True -> tô nền đen bằng SAM 2 trước khi trích đặc trưng (xem sam2_model.py)
+    mask_point: (u, v) tỉ lệ 0–1 nếu người dùng click chọn vật thể; None = tự động
     log: hàm nhận 1 chuỗi (mặc định print; truyền hàm khác để đẩy lên Gradio).
     """
     image_dir = Path(image_dir)
@@ -67,8 +70,19 @@ def run_colmap(image_dir, work_dir, dense=False, matcher="sift", log=print):
         "image_dir": str(image_dir),
         "images_input": len(images),
         "matcher": matcher,
+        "mask": bool(mask),
         "timings": {},
     }
+
+    # --- 0 (tùy chọn): Loại nền bằng SAM 2, TRƯỚC khi trích đặc trưng ---
+    # import ở đây chứ không ở đầu file: người không dùng mask sẽ không cần cài SAM 2
+    if mask:
+        from src.ai.segmentation.sam2_model import apply_mask
+
+        mask_stats = apply_mask(image_dir, work_dir / "images_masked",
+                                point=mask_point, log=log)
+        stats.update(mask_stats)
+        image_dir = work_dir / "images_masked"    # các bước sau đều đọc bản đã mask
 
     # 1 + 2: Trích điểm đặc trưng và ghép cặp ảnh
     if matcher == "sift":
@@ -87,6 +101,11 @@ def run_colmap(image_dir, work_dir, dense=False, matcher="sift", log=print):
         # --- Matcher học sâu: SuperPoint/ALIKED + LightGlue (matching_model.py) ---
         stats.update(run_deep_matching(image_dir, database_path,
                                        extractor=matcher, log=log))
+
+    # Ghi thời gian mask SAU bước matching: nhánh deep trả về dict "timings" riêng,
+    # ghi trước đó sẽ bị `stats.update(...)` ghi đè mất -> tổng thời gian sai.
+    if mask:
+        stats["timings"]["mask"] = stats["mask_s"]
 
     # --- 3. Sparse reconstruction (SfM) ---
     t = time.time()
@@ -147,11 +166,19 @@ def main():
         matcher = sys.argv[i + 1]
         del sys.argv[i:i + 2]
 
+    # --mask: bật loại nền SAM 2; --point u,v: chọn vật thể bằng 1 điểm (tỉ lệ 0–1)
+    mask = "--mask" in sys.argv
+    mask_point = None
+    if "--point" in sys.argv:
+        i = sys.argv.index("--point")
+        mask_point = tuple(float(v) for v in sys.argv[i + 1].split(","))
+        del sys.argv[i:i + 2]
+
     # Lấy tham số không bắt đầu bằng "-" làm đường dẫn (cho phép gõ --dense ở bất kỳ đâu)
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     if not args:
         print("Cach dung: python src/reconstruction/colmap_pipeline.py <thu_muc_anh> "
-              "[--dense] [--matcher superpoint|aliked]")
+              "[--dense] [--matcher superpoint|aliked] [--mask] [--point 0.5,0.5]")
         return 2
 
     image_dir = Path(args[0])
@@ -161,6 +188,7 @@ def main():
     try:
         # flush=True: COLMAP ghi log ra stderr nên nếu không flush, log của ta sẽ bị đẩy xuống cuối
         stats = run_colmap(image_dir, work_dir, dense=dense, matcher=matcher,
+                           mask=mask, mask_point=mask_point,
                            log=lambda m: print(m, flush=True))
     except (FileNotFoundError, ValueError, RuntimeError) as exc:
         print(f"LOI: {exc}")

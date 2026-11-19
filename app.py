@@ -7,9 +7,12 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 
+import cv2
 import gradio as gr
+import numpy as np
 import pandas as pd
 import pycolmap
+from PIL import Image
 
 from src.preprocessing.quality_checker import check_images
 from src.preprocessing.video_processor import extract_frames
@@ -64,6 +67,39 @@ def keep_good_images(results, src_dir, work_dir):
     return good_dir
 
 
+def show_preview(video, images):
+    """Hiển thị 1 ảnh đại diện (ảnh đầu tiên, hoặc frame đầu của video)
+    để người dùng click chọn vật thể cần giữ lại.
+    """
+    if images:
+        return np.array(Image.open(images[0]).convert("RGB"))
+    if video:
+        cap = cv2.VideoCapture(video)
+        ok, frame = cap.read()
+        cap.release()
+        if ok:
+            return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)   # OpenCV đọc ảnh BGR
+    return None
+
+
+def pick_point(image, evt: gr.SelectData):
+    """Bắt sự kiện click trên ảnh xem trước.
+
+    Trả về: (điểm chọn dạng TỈ LỆ 0–1, dòng chữ thông báo).
+    - PHẢI annotate `evt: gr.SelectData`: Gradio chỉ tiêm event data vào tham số
+      có type hint này (tham số thường sẽ bị coi là input -> lỗi "received 1").
+    - evt.index là toạ độ theo ẢNH GỐC (Gradio đã tự quy đổi từ tọa độ màn hình).
+    - Chia cho kích thước ảnh gốc -> được tỉ lệ, nên dùng lại đúng cho mọi ảnh
+      (mỗi ảnh có thể khác kích thước).
+    """
+    if image is None:
+        return None, "Chưa có ảnh xem trước"
+    x, y = evt.index
+    h, w = image.shape[:2]
+    u, v = x / w, y / h
+    return (u, v), f"Đã chọn ({u:.2f}, {v:.2f}) — áp cho mọi ảnh"
+
+
 def export_sparse_ply(sparse_dir, out_ply):
     """Xuất trực tiếp mô hình mây điểm thưa (Sparse Point Cloud) ra file định dạng .PLY.
     
@@ -78,11 +114,15 @@ def export_sparse_ply(sparse_dir, out_ply):
 
 # HÀM ĐIỀU PHỐI CHÍNH (PIPELINE CALLBACK)
 
-def run_pipeline(video, images, fps, dense, good_only, matcher, progress=gr.Progress()):
+def run_pipeline(video, images, fps, dense, good_only, matcher, mask, mask_point,
+                 progress=gr.Progress()):
     """Callback chính của ứng dụng: 
-    Video/Ảnh đầu vào -> Kiểm tra chất lượng -> Chạy COLMAP SfM -> Xuất file PLY + Lưu số liệu.
+    Video/Ảnh đầu vào -> Kiểm tra chất lượng -> (tùy chọn) loại nền SAM 2 ->
+    Chạy COLMAP SfM -> Xuất file PLY + Lưu số liệu.
 
     matcher: "sift" | "superpoint" | "aliked" — cách ghép cặp ảnh.
+    mask: True -> tô nền đen bằng SAM 2 trước khi trích đặc trưng.
+    mask_point: (u, v) tỉ lệ 0–1 nếu đã click chọn vật thể; None = tự động.
     """
     logs = []
 
@@ -95,6 +135,8 @@ def run_pipeline(video, images, fps, dense, good_only, matcher, progress=gr.Prog
         print(msg, flush=True)      
         if "[dense]" in str(msg):   # dense ~10 phút: cập nhật thanh tiến trình để UI không "đứng"
             progress(0.5, desc="Dense: patch-match stereo (chậm nhất)")
+        if "[mask]" in str(msg):    # SAM 2 ~4 giây/ảnh: báo cho UI biết đang ở bước nào
+            progress(0.18, desc="SAM 2: loại nền")
 
     # Tạo định danh phiên chạy dựa trên thời gian thực (YYYYMMDD-HHMMSS-mmm)
     # (thêm mili-giây để 2 request trong cùng 1 giây không ghi đè work_dir của nhau)
@@ -130,7 +172,8 @@ def run_pipeline(video, images, fps, dense, good_only, matcher, progress=gr.Prog
         # Bước 3: Thực thi thuật toán COLMAP (Trích điểm -> Khớp cặp -> Tái tạo Sparse/Dense)
 
         progress(0.2, desc=f"COLMAP: {matcher} -> matching -> sparse")
-        stats = run_colmap(colmap_input, work_dir, dense=dense, matcher=matcher, log=log)
+        stats = run_colmap(colmap_input, work_dir, dense=dense, matcher=matcher,
+                           mask=mask, mask_point=mask_point, log=log)
         if stats.get("inlier_ratio") is not None:
             log(f"[matcher] {stats['matcher']}: inlier {stats['inlier_ratio']:.1%} "
                 f"({stats['inlier_matches']}/{stats['raw_matches']})")
@@ -189,6 +232,13 @@ with gr.Blocks(title="FreeAI 3D Scanner") as demo:
                 label="Matcher",
                 info="SIFT: nhanh | SuperPoint/ALIKED + LightGlue: mạng nơ-ron (2.1)",
             )
+            # Loại nền bằng SAM 2 (Giai đoạn 2.2) — bật rồi mới cần click chọn vật thể
+            mask_in = gr.Checkbox(value=False, label="Loại nền bằng SAM 2")
+            point_state = gr.State(value=None)   # (u, v) tỉ lệ 0–1; None = tự động
+            point_out = gr.Textbox(value="Tự động (vật thể ở giữa khung hình)",
+                                   label="Vật thể được giữ lại", interactive=False)
+            preview = gr.Image(label="Ảnh xem trước — bấm vào vật thể để chọn",
+                               type="numpy", height=240)
             btn = gr.Button("Tạo point cloud", variant="primary")
 
         # Cột bên phải: Hiển thị kết quả trực quan (Mô hình 3D, Bảng số liệu, Log hệ thống)
@@ -202,9 +252,18 @@ with gr.Blocks(title="FreeAI 3D Scanner") as demo:
             log_out = gr.Textbox(label="Log", lines=10, max_lines=10, autoscroll=True)
 
     # Đăng ký sự kiện (Event Listener): Khi bấm nút, gọi hàm run_pipeline và truyền nhận dữ liệu giữa UI
+
+    # 1) Tải ảnh/video lên -> tự hiển thị ảnh xem trước
+    video_in.change(fn=show_preview, inputs=[video_in, images_in], outputs=preview)
+    images_in.change(fn=show_preview, inputs=[video_in, images_in], outputs=preview)
+
+    # 2) Bấm vào ảnh xem trước -> lưu tọa độ chọn vật thể (dạng tỉ lệ 0–1)
+    preview.select(fn=pick_point, inputs=preview, outputs=[point_state, point_out])
+
     btn.click(
         fn=run_pipeline,
-        inputs=[video_in, images_in, fps_in, dense_in, good_in, matcher_in],
+        inputs=[video_in, images_in, fps_in, dense_in, good_in, matcher_in,
+                mask_in, point_state],
         outputs=[model_out, stats_out, quality_out, log_out, file_out],
     )
 
